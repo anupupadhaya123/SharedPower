@@ -1,116 +1,223 @@
-
-#imports
-from tkinter import *
-from tkinter import messagebox as ms
 import sqlite3
+from tkinter import *
+conn = sqlite3.connect('shared_power.db')
+c = conn.cursor()
 
-# make database and users (if not exists already) table at programme start up
-with sqlite3.connect('spd.db') as db:
-    c = db.cursor()
+try:
+    c.execute("""
+                CREATE TABLE users(
+                    username text,
+                    email text,
+                    fullname text,
+                    password text,
+                    address text,
+                    phoneno integer
+                )
+            """)
+except Exception as e:
+    pass
 
-c.execute('CREATE TABLE IF NOT EXISTS user (username PRIMARY KEY NOT NULL,password TEXT NOT NULL,Full_Name TEXT NOT NULL,Address TEXT NOT NULL,Phone INTEGER NOT NULL);')
-db.commit()
-db.close()
+try:
+    c.execute("""
+                CREATE TABLE tools(
+                    tool_name text,
+                    description text,
+                    half_day_rate integer,
+                    full_day_rate integer
+                )
+              """)
+except Exception as e:
+    pass
 
-#main Class
-class main:
-    def __init__(self,master):
-    	# Window
-        self.master = master
-        # Some Usefull variables
-        self.username = StringVar()
-        self.password = StringVar()
-        self.n_username = StringVar()
-        self.n_password = StringVar()
-        self.n_Full_Name = StringVar()
-        self.n_address = StringVar()
-        self.n_phoneno = IntVar()
-        #Create Widgets
-        self.widgets()
+try:
+    c.execute("""
+                CREATE TABLE invoice(
+                    description text,
+                    quantity integer,
+                    price integer,
+                    total integer
+                )
+            """)
 
-    #Login Function
-    def login(self):
-    	#Establish Connection
-        with sqlite3.connect('spd.db') as db:
-            c = db.cursor()
+try :
+    c.execute("""
+        CREATE TABLE BOOKS(
+            username text,
+            tool_name text,
+            quantity integer,
+            FOREIGN KEY (username) REFERENCES users(username),
+            FOREIGN KEY (tool_name) REFERENCES tools(tool_name),
+            FOREIGN KEY(tool_quantity) REFERENCES tools(quantity)
+            )
+    """)
+except Exception as e:
+    pass
 
-        #Find user If there is any take proper action
-        find_user = ('SELECT * FROM user WHERE username = ? and password = ?')
-        c.execute(find_user,[(self.username.get()),(self.password.get())])
-        result = c.fetchall()
-        if result:
-            self.logf.pack_forget()
-            self.head['text'] = self.username.get() + '\n Loged In'
-            self.head['pady'] = 150
+def check_user(username):
+    c.execute("SELECT * FROM users WHERE username = ?", (username,))
+    if len(c.fetchall()) == 0:
+        return True
+
+def validate(username, password):
+    c.execute("SELECT * FROM users WHERE username = ? ", (username, ))
+    print(username)
+    s = c.fetchall()
+    print(s)
+    if s[0][3] == password:
+        return True
+
+def register(username, email , password, fullname, address , phoneno, window):
+    if username != '' and email != '' and password != '' and fullname != '' and address != '' and phoneno != 0:
+        if check_user(username):
+            c.execute("INSERT INTO users VALUES (?, ? , ? , ? , ?, ?)", (username, email, fullname, password, address, phoneno))
+            print("registered")
+            conn.commit()
+            window.destroy()
+            loginpage()
         else:
-            ms.showerror('Oops!','Username Not Found.')
+            print("User exists with this name")
+    print("Empty fields")
 
-    def new_user(self):
-    	#Establish Connection
-        with sqlite3.connect('spd.db') as db:
-            c = db.cursor()
-
-        #Find Existing username if any take proper action
-        find_user = ('SELECT * FROM user WHERE username = ?')
-        c.execute(find_user,[(self.username.get())])
-        if c.fetchall():
-            ms.showerror('Error!','Username Taken Try a Diffrent One.')
+def login(username, password,window):
+    if username != '' and password != '':
+        if validate(username, password):
+            print('login')
+            window.destroy()
+            dashboard()
         else:
-            ms.showinfo('Success!','Account Created!')
-            self.log()
-        #Create New Account
-        insert = 'INSERT INTO user(username,password,Full_Name,Address,Phone) VALUES(?,?,?,?,?)'
-        c.execute(insert,[(self.n_username.get()),(self.n_password.get()),(self.n_Full_Name.get()),(self.n_address.get()),(self.n_phoneno.get())])
-        db.commit()
+            print("Wrong password")
 
-        #Frame Packing Methods
-    def log(self):
-        self.username.set('')
-        self.password.set('')
-        self.crf.pack_forget()
-        self.head['text'] = 'LOGIN'
-        self.logf.pack()
-    def cr(self):
-        self.n_username.set('')
-        self.n_password.set('')
-        self.n_Full_Name.set('')
-        self.n_address.set('')
-        self.n_phoneno.set('')
-        self.logf.pack_forget()
-        self.head['text'] = 'Create Account'
-        self.crf.pack()
+def hire(tools_name, quantity, username):
+    c.execute("""INSERT INTO books VALUES(?,?,?)""", (tools_name, quantity, username))
+    conn.commit()
+    print("{} is hired".format(tools_name))
 
-    #Widgets
-    def widgets(self):
-        self.head = Label(self.master,text = 'LOGIN',font = ('',35),pady = 10)
-        self.head.pack()
-        self.logf = Frame(self.master,padx =10,pady = 10)
-        Label(self.logf,text = 'Username: ',font = ('',20),pady=5,padx=5).grid(sticky = W)
-        Entry(self.logf,textvariable = self.username,bd = 5,font = ('',15)).grid(row=0,column=1)
-        Label(self.logf,text = 'Password: ',font = ('',20),pady=5,padx=5).grid(sticky = W)
-        Entry(self.logf,textvariable = self.password,bd = 5,font = ('',15),show = '*').grid(row=1,column=1)
-        Button(self.logf,text = ' Login ',bd = 3 ,font = ('',15),padx=5,pady=5,command=self.login).grid()
-        Button(self.logf,text = ' Create Account ',bd = 3 ,font = ('',15),padx=5,pady=5,command=self.cr).grid(row=2,column=1)
-        self.logf.pack()
+def loginpage():
+    l = Login()
+`
+def register_page(window):
+    window.destroy()
+    b = HomePage()
 
-        self.crf = Frame(self.master,padx =10,pady = 10)
-        Label(self.crf,text = 'Username: ',font = ('',20),pady=5,padx=5).grid(sticky = W)
-        Entry(self.crf,textvariable = self.n_username,bd = 5,font = ('',15)).grid(row=0,column=1)
-        Label(self.crf,text = 'Password: ',font = ('',20),pady=5,padx=5).grid(sticky = W)
-        Entry(self.crf,textvariable = self.n_password,bd = 5,font = ('',15),show = '*').grid(row=1,column=1)
-        Label(self.crf,text = 'Full Name ',font = ('',20),pady=5,padx=5).grid(sticky = W)
-        Entry(self.crf,textvariable = self.n_Full_Name,bd = 5,font = ('',15)).grid(row=2,column=1)
-        Label(self.crf,text = 'Address', font = ('',20),pady=5,padx=5).grid(sticky=W)
-        Entry(self.crf,textvariable = self.n_address,bd=5,font=('',15)).grid(row=3,column=1)
-        Label(self.crf,text='Phone No:',font=('',20),pady=5,padx=5).grid(sticky=W)
-        Entry(self.crf, textvariable = self.n_phoneno, bd=5,font=('',15)).grid(row=4, column=1)
-        Button(self.crf,text = 'Create Account',bd = 3 ,font = ('',15),padx=5,pady=5,command=self.new_user).grid(row=5,column=1)
-        Button(self.crf,text = 'Go to Login',bd = 3 ,font = ('',15),padx=5,pady=5,command=self.log).grid(row=5,column=0)
+def addtool(window):
+    window.destroy()
+    c = AddTool()
+
+def booktool(window):
+    window.destroy()
+    e = BookTool()
+
+def searchtool(window):
+    window.destroy()
 
 
 
-#create window and application object
-root = Tk()
-#root.title("Login Form")
-main(root)
-root.mainloop()
+
+class HomePage:
+
+    def __init__(self):
+        window = Tk()
+        window.geometry("300x500")
+        username_label = Label(window, text="Username")
+        username_label.pack()
+        username_entry= Entry(window, text="Username")
+        username_entry.pack()
+        email_label = Label(window, text="Email")
+        email_label.pack()
+        email_entry = Entry(window)
+        email_entry.pack()
+        password_label = Label(window, text="Password")
+        password_label.pack()
+        password_entry = Entry(window, show="*")
+        password_entry.pack()
+        fullname_label = Label(window, text="Fullname")
+        fullname_label.pack()
+        fullname_entry = Entry(window)
+        fullname_entry.pack()
+        address_label=Label(window,text="Address")
+        address_label.pack()
+        address_entry=Entry(window)
+        address_entry.pack()
+        phoneno_label=Label(window,text="Phoneno")
+        phoneno_label.pack()
+        phoneno_entry=Entry(window)
+        phoneno_entry.pack()
+        register_button=Button(window,text="Register", command=lambda:register(username_entry.get(),
+                                                                               email_entry.get(),
+                                                                               password_entry.get(),
+                                                                               fullname_entry.get(),
+                                                                               address_entry.get(),
+                                                                               phoneno_entry.get(),
+                                                                               window))
+        register_button.pack()
+        window.mainloop()
+
+class Login:
+
+    def __init__(self):
+        window = Tk()
+        window.geometry("300x500")
+        username_label = Label(window, text="Username")
+        username_label.pack()
+        username_entry= Entry(window, text="Username")
+        username_entry.pack()
+        password_label = Label(window, text="Password")
+        password_label.pack()
+        password_entry = Entry(window, show="*")
+        password_entry.pack()
+        login_button = Button(window, text="Login", command=lambda : login(username_entry.get(), password_entry.get(), window))
+        login_button.pack()
+        power = Button(window, text="Not registered , register here", command=lambda: register_page(window))
+
+class Dashboard:
+
+    def __init__(self):
+        window = Tk()
+        window.geometry('300x500')
+        title = Label(window, text="Welcome to dashboard")
+        button = Button(window, text="Add Tool" , command=lambda: addtool(window))
+        button.pack()
+        search_label = Entry(window)
+        search_label.insert(0, 'SEARCH ITEM')
+        search_label.pack()
+        button1=Button(windowms,text='Book Tool',command=lambda: searchtool(window))
+        button1.pack()
+        window.mainloop()
+
+class AddTool:
+
+    def __init__(self):
+        window = Tk()
+        window.geometry('300x500')
+        tool_name_label = Label(window, text="tool's name")
+        tool_name_label.pack()
+        tool_name_entry = Entry(window)
+        tool_name_entry.pack()
+        description_label = Label(window, text="description")
+        description_label.pack()
+        description_entry = Entry(window)
+        description_entry.pack()
+        half_day_rate_label = Label(window , text="half day rate ")
+        half_day_rate_label.pack()
+        half_day_rate_entry = Entry(window)
+        half_day_rate_entry.pack()
+        full_day_rate_label = Label(window , text="Full day rate")
+        full_day_rate_label.pack()
+        full_day_rate_entry = Entry(window)
+        full_day_rate_entry.pack()
+        submit_button = Button(window , text="Submit", command=lambda: print("Tool Added Successfully"))
+        submit_button.pack()
+
+class BookTool:
+
+    def __init__(self):
+        window=Tk()
+        window.geometry('300x500')
+
+
+
+
+
+def dashboard():
+    d = Dashboard()
+loginpage()
